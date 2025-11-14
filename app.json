@@ -4,6 +4,12 @@
       "eas": {
         "projectId": "f5863431-ed0d-44d4-96c5-0abd6a399901"
       }
+    },
+    "ios": {
+      "bundleIdentifier": "com.somgiri.lister",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     }
   }
 }
