@@ -13,6 +13,8 @@ import { StarRating } from '@/components/ui/star-rating'
 import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { smartAI } from './ai-brain'
+import { auth } from './firebase'
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendEmailVerification, sendPasswordResetEmail } from 'firebase/auth'
 
 const translations: any = {
   en: {
@@ -979,6 +981,7 @@ function App() {
   const [showWelcome, setShowWelcome] = useState(true)
   const [showSettings, setShowSettings] = useState(false)
   const [showAbout, setShowAbout] = useState(false)
+  const [showFAQ, setShowFAQ] = useState(false)
   const [skillLevel, setSkillLevel] = useState('')
   const [developmentGoal, setDevelopmentGoal] = useState('')
   const [customGoal, setCustomGoal] = useState('')
@@ -1030,6 +1033,10 @@ function App() {
   const [showFreeWillChat, setShowFreeWillChat] = useState(false)
   const [freeWillChatMessages, setFreeWillChatMessages] = useState<{text: string, isBot: boolean}[]>([])
   const [freeWillChatInput, setFreeWillChatInput] = useState('')
+  const [consoleOutput, setConsoleOutput] = useState<string[]>([])
+  const [showTerminal, setShowTerminal] = useState(false)
+  const [showForgotPassword, setShowForgotPassword] = useState(false)
+  const [resetEmail, setResetEmail] = useState('')
 
   const getAIResponse = async (userMsg: string) => {
     setChatHistory(prev => [...prev.slice(-10), userMsg.toLowerCase()]);
@@ -1510,22 +1517,22 @@ function App() {
   };
 
   const sidebarLinks = learningPath === 'websites' ? [
-    { label: 'Home', onClick: () => handleQuit(() => setActiveCourse('')), icon: <Home className="text-white h-5 w-5 flex-shrink-0" /> },
-    { label: getCourseTitle('HTML Basics'), onClick: () => handleQuit(() => setActiveCourse(getCourseTitle('HTML Basics'))), icon: <Code className="text-white h-5 w-5 flex-shrink-0" /> },
-    { label: getCourseTitle('CSS Styling'), onClick: () => handleQuit(() => setActiveCourse(getCourseTitle('CSS Styling'))), icon: <Palette className="text-white h-5 w-5 flex-shrink-0" /> },
-    { label: getCourseTitle('JavaScript'), onClick: () => handleQuit(() => setActiveCourse(getCourseTitle('JavaScript'))), icon: <Zap className="text-white h-5 w-5 flex-shrink-0" /> },
+    { label: 'Home', onClick: () => handleQuit(() => { setActiveCourse(''); setShowFreeWill(false); }), icon: <Home className="text-white h-5 w-5 flex-shrink-0" /> },
+    { label: getCourseTitle('HTML Basics'), onClick: () => handleQuit(() => { setActiveCourse(getCourseTitle('HTML Basics')); setShowFreeWill(false); }), icon: <Code className="text-white h-5 w-5 flex-shrink-0" /> },
+    { label: getCourseTitle('CSS Styling'), onClick: () => handleQuit(() => { setActiveCourse(getCourseTitle('CSS Styling')); setShowFreeWill(false); }), icon: <Palette className="text-white h-5 w-5 flex-shrink-0" /> },
+    { label: getCourseTitle('JavaScript'), onClick: () => handleQuit(() => { setActiveCourse(getCourseTitle('JavaScript')); setShowFreeWill(false); }), icon: <Zap className="text-white h-5 w-5 flex-shrink-0" /> },
     { label: 'Free Will', onClick: () => { setShowFreeWill(true); setActiveCourse(''); }, icon: <FileCode className="text-white h-5 w-5 flex-shrink-0" /> },
   ] : learningPath === 'mobile-apps' ? [
-    { label: 'Home', onClick: () => handleQuit(() => setActiveCourse('')), icon: <Home className="text-white h-5 w-5 flex-shrink-0" /> },
-    { label: skillLevel === 'learning' ? 'Mobile Intro' : skillLevel === 'basics' ? 'Advanced React Native' : skillLevel === 'expert' ? 'Mobile Architecture' : 'React Native', onClick: () => handleQuit(() => setActiveCourse(skillLevel === 'learning' ? 'Mobile Intro' : skillLevel === 'basics' ? 'Advanced React Native' : skillLevel === 'expert' ? 'Mobile Architecture' : 'React Native')), icon: <Code className="text-white h-5 w-5 flex-shrink-0" /> },
-    { label: skillLevel === 'learning' ? 'App.js Start' : skillLevel === 'basics' ? 'State Management' : skillLevel === 'expert' ? 'Performance Optimization' : 'App.js Basics', onClick: () => handleQuit(() => setActiveCourse(skillLevel === 'learning' ? 'App.js Start' : skillLevel === 'basics' ? 'State Management' : skillLevel === 'expert' ? 'Performance Optimization' : 'App.js Basics')), icon: <FileCode className="text-white h-5 w-5 flex-shrink-0" /> },
-    { label: skillLevel === 'learning' ? 'Basic Tools' : skillLevel === 'basics' ? 'Advanced Tools' : skillLevel === 'expert' ? 'Enterprise Tools' : 'Mobile Tools', onClick: () => handleQuit(() => setActiveCourse(skillLevel === 'learning' ? 'Basic Tools' : skillLevel === 'basics' ? 'Advanced Tools' : skillLevel === 'expert' ? 'Enterprise Tools' : 'Mobile Tools')), icon: <Zap className="text-white h-5 w-5 flex-shrink-0" /> },
+    { label: 'Home', onClick: () => handleQuit(() => { setActiveCourse(''); setShowFreeWill(false); }), icon: <Home className="text-white h-5 w-5 flex-shrink-0" /> },
+    { label: skillLevel === 'learning' ? 'Mobile Intro' : skillLevel === 'basics' ? 'Advanced React Native' : skillLevel === 'expert' ? 'Mobile Architecture' : 'React Native', onClick: () => handleQuit(() => { setActiveCourse(skillLevel === 'learning' ? 'Mobile Intro' : skillLevel === 'basics' ? 'Advanced React Native' : skillLevel === 'expert' ? 'Mobile Architecture' : 'React Native'); setShowFreeWill(false); }), icon: <Code className="text-white h-5 w-5 flex-shrink-0" /> },
+    { label: skillLevel === 'learning' ? 'App.js Start' : skillLevel === 'basics' ? 'State Management' : skillLevel === 'expert' ? 'Performance Optimization' : 'App.js Basics', onClick: () => handleQuit(() => { setActiveCourse(skillLevel === 'learning' ? 'App.js Start' : skillLevel === 'basics' ? 'State Management' : skillLevel === 'expert' ? 'Performance Optimization' : 'App.js Basics'); setShowFreeWill(false); }), icon: <FileCode className="text-white h-5 w-5 flex-shrink-0" /> },
+    { label: skillLevel === 'learning' ? 'Basic Tools' : skillLevel === 'basics' ? 'Advanced Tools' : skillLevel === 'expert' ? 'Enterprise Tools' : 'Mobile Tools', onClick: () => handleQuit(() => { setActiveCourse(skillLevel === 'learning' ? 'Basic Tools' : skillLevel === 'basics' ? 'Advanced Tools' : skillLevel === 'expert' ? 'Enterprise Tools' : 'Mobile Tools'); setShowFreeWill(false); }), icon: <Zap className="text-white h-5 w-5 flex-shrink-0" /> },
   ] : [
-    { label: 'Home', onClick: () => handleQuit(() => setActiveCourse('')), icon: <Home className="text-white h-5 w-5 flex-shrink-0" /> },
-    { label: getCourseTitle('HTML Basics'), onClick: () => handleQuit(() => setActiveCourse(getCourseTitle('HTML Basics'))), icon: <Code className="text-white h-5 w-5 flex-shrink-0" /> },
-    { label: getCourseTitle('CSS Styling'), onClick: () => handleQuit(() => setActiveCourse(getCourseTitle('CSS Styling'))), icon: <Palette className="text-white h-5 w-5 flex-shrink-0" /> },
-    { label: getCourseTitle('JavaScript'), onClick: () => handleQuit(() => setActiveCourse(getCourseTitle('JavaScript'))), icon: <Zap className="text-white h-5 w-5 flex-shrink-0" /> },
-    { label: getCourseTitle('Python'), onClick: () => handleQuit(() => setActiveCourse(getCourseTitle('Python'))), icon: <FileCode className="text-white h-5 w-5 flex-shrink-0" /> },
+    { label: 'Home', onClick: () => handleQuit(() => { setActiveCourse(''); setShowFreeWill(false); }), icon: <Home className="text-white h-5 w-5 flex-shrink-0" /> },
+    { label: getCourseTitle('HTML Basics'), onClick: () => handleQuit(() => { setActiveCourse(getCourseTitle('HTML Basics')); setShowFreeWill(false); }), icon: <Code className="text-white h-5 w-5 flex-shrink-0" /> },
+    { label: getCourseTitle('CSS Styling'), onClick: () => handleQuit(() => { setActiveCourse(getCourseTitle('CSS Styling')); setShowFreeWill(false); }), icon: <Palette className="text-white h-5 w-5 flex-shrink-0" /> },
+    { label: getCourseTitle('JavaScript'), onClick: () => handleQuit(() => { setActiveCourse(getCourseTitle('JavaScript')); setShowFreeWill(false); }), icon: <Zap className="text-white h-5 w-5 flex-shrink-0" /> },
+    { label: getCourseTitle('Python'), onClick: () => handleQuit(() => { setActiveCourse(getCourseTitle('Python')); setShowFreeWill(false); }), icon: <FileCode className="text-white h-5 w-5 flex-shrink-0" /> },
   ]
 
   return (
@@ -1757,6 +1764,7 @@ function App() {
                 <ul className="flex gap-8 items-center">
                   <li><a href="#home" className="hover:text-gray-400 transition">{t('home', language)}</a></li>
                   <li><a href="#courses" className="hover:text-gray-400 transition">{t('courses', language)}</a></li>
+                  <li><button onClick={() => setShowFAQ(true)} className="hover:text-gray-400 transition">FAQ</button></li>
                   <li><button onClick={() => setShowAbout(true)} className="hover:text-gray-400 transition">{t('about', language)}</button></li>
                   <li><button onClick={() => setShowSettings(true)} className="hover:text-gray-400 transition">{t('settings', language)}</button></li>
                 </ul>
@@ -2309,15 +2317,32 @@ function App() {
           ) : showFreeWill ? (
             <section className="py-4 md:py-8 px-4 md:px-8 pb-20 md:pb-8 animate-fade-in h-full">
               <div className="max-w-7xl mx-auto h-full flex flex-col">
+                {typeof window !== 'undefined' && (() => {
+                  const handleMessage = (e: MessageEvent) => {
+                    if (e.data.type === 'console') {
+                      const prefix = e.data.level === 'error' ? '[ERROR]' : e.data.level === 'warn' ? '[WARN]' : '[LOG]';
+                      setConsoleOutput(prev => [...prev, `${prefix} ${e.data.message}`]);
+                    }
+                  };
+                  window.removeEventListener('message', handleMessage);
+                  window.addEventListener('message', handleMessage);
+                  return null;
+                })()}
                 <div className="flex justify-between items-center mb-4">
                   <button onClick={() => setShowFreeWill(false)} className="text-gray-400 hover:text-white transition flex items-center gap-2">
                     ← Back
                   </button>
                   <h1 className="text-2xl md:text-3xl font-bold">Free Will Playground</h1>
-                  <div className="w-20"></div>
+                  <button onClick={() => setShowTerminal(true)} className={`px-4 py-2 rounded-lg font-semibold transition ${
+                    theme === 'dark'
+                      ? 'bg-white/10 hover:bg-white/20 text-white'
+                      : 'bg-black/10 hover:bg-black/20 text-black'
+                  }`}>
+                    💻 Terminal
+                  </button>
                 </div>
                 
-                <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 min-h-0">
+                <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 min-h-0 overflow-hidden">
                   <div className={`flex flex-col border-2 rounded-2xl overflow-hidden ${
                     theme === 'dark'
                       ? 'bg-[#111] border-[#333]'
@@ -2393,9 +2418,27 @@ function App() {
                             <body>
                               ${freeWillFiles.html}
                               <script>
+                                const originalLog = console.log;
+                                const originalError = console.error;
+                                const originalWarn = console.warn;
+                                
+                                console.log = function(...args) {
+                                  window.parent.postMessage({ type: 'console', level: 'log', message: args.join(' ') }, '*');
+                                  originalLog.apply(console, args);
+                                };
+                                console.error = function(...args) {
+                                  window.parent.postMessage({ type: 'console', level: 'error', message: args.join(' ') }, '*');
+                                  originalError.apply(console, args);
+                                };
+                                console.warn = function(...args) {
+                                  window.parent.postMessage({ type: 'console', level: 'warn', message: args.join(' ') }, '*');
+                                  originalWarn.apply(console, args);
+                                };
+                                
                                 try {
                                   ${freeWillFiles.js}
                                 } catch(e) {
+                                  console.error('Error: ' + e.message);
                                   document.body.innerHTML += '<div style="color: red; padding: 20px; background: #fee; margin: 10px; border: 2px solid red; border-radius: 5px;"><strong>Error:</strong> ' + e.message + '</div>';
                                 }
                               </script>
@@ -2406,6 +2449,29 @@ function App() {
                         title="Preview"
                         sandbox="allow-scripts"
                       />
+                    </div>
+                    <div className={`border-t h-32 overflow-y-auto ${
+                      theme === 'dark'
+                        ? 'bg-black border-white/20'
+                        : 'bg-gray-900 border-black/20'
+                    }`}>
+                      <div className="px-3 py-2 border-b border-white/10 text-xs font-semibold text-gray-400 flex justify-between items-center">
+                        <span>Console</span>
+                        <button onClick={() => setConsoleOutput([])} className="text-xs hover:text-white transition">Clear</button>
+                      </div>
+                      <div className="p-2 font-mono text-xs space-y-1">
+                        {consoleOutput.length === 0 ? (
+                          <div className="text-gray-500">Console output will appear here...</div>
+                        ) : (
+                          consoleOutput.map((log, i) => (
+                            <div key={i} className={`${
+                              log.startsWith('[ERROR]') ? 'text-red-400' :
+                              log.startsWith('[WARN]') ? 'text-yellow-400' :
+                              'text-green-400'
+                            }`}>{log}</div>
+                          ))
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -2632,6 +2698,152 @@ function App() {
             </footer>
           </div>
 
+          <Dialog open={showForgotPassword} onClose={() => { setShowForgotPassword(false); setResetEmail(''); }} title="Reset Password">
+            <div className="space-y-4">
+              <p className="text-sm text-gray-400">Enter your email address and we'll send you a link to reset your password.</p>
+              <p className="text-xs text-yellow-400">⚠️ Check your spam folder if you don't see the email</p>
+              
+              <div>
+                <label className="block text-sm font-semibold mb-2">Email</label>
+                <input
+                  type="email"
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
+                  placeholder="Enter your email"
+                  className="w-full bg-black border border-white/20 rounded-lg px-4 py-2 text-white placeholder:text-gray-500 focus:border-white focus:outline-none"
+                />
+              </div>
+              
+              <button
+                onClick={async () => {
+                  if (!resetEmail) {
+                    alert('Please enter your email');
+                    return;
+                  }
+                  try {
+                    await sendPasswordResetEmail(auth, resetEmail);
+                    alert('Password reset email sent! Check your inbox (and spam folder).');
+                    setShowForgotPassword(false);
+                    setResetEmail('');
+                  } catch (error: any) {
+                    alert('Error: ' + error.message);
+                  }
+                }}
+                disabled={!resetEmail}
+                className="w-full py-3 bg-white text-black rounded-lg font-bold hover:bg-gray-200 transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+              >
+                Send Reset Link
+              </button>
+              
+              <button
+                onClick={() => {
+                  setShowForgotPassword(false);
+                  setShowAuth(true);
+                  setResetEmail('');
+                }}
+                className="w-full py-2 text-gray-400 hover:text-white transition text-sm"
+              >
+                Back to Sign In
+              </button>
+            </div>
+          </Dialog>
+
+          <Dialog open={showTerminal} onClose={() => setShowTerminal(false)} title="Terminal - Setup Instructions">
+            <div className="space-y-4">
+              <p className="text-sm text-gray-400">For larger projects with dependencies, set up a local development environment:</p>
+              
+              <div className={`border rounded-lg p-4 ${
+                theme === 'dark' ? 'bg-black border-white/20' : 'bg-gray-100 border-black/20'
+              }`}>
+                <h3 className="font-bold text-white mb-2">📦 Install Node.js</h3>
+                <p className="text-sm mb-2">Download from: <a href="https://nodejs.org" target="_blank" rel="noopener noreferrer" className="text-blue-400 underline">nodejs.org</a></p>
+              </div>
+
+              <div className={`border rounded-lg p-4 ${
+                theme === 'dark' ? 'bg-black border-white/20' : 'bg-gray-100 border-black/20'
+              }`}>
+                <h3 className="font-bold text-white mb-2">🚀 Create Project</h3>
+                <code className="block bg-black/50 p-2 rounded text-xs text-green-400 mb-2">npx create-react-app my-app</code>
+                <code className="block bg-black/50 p-2 rounded text-xs text-green-400">npm create vite@latest my-app</code>
+              </div>
+
+              <div className={`border rounded-lg p-4 ${
+                theme === 'dark' ? 'bg-black border-white/20' : 'bg-gray-100 border-black/20'
+              }`}>
+                <h3 className="font-bold text-white mb-2">📥 Install Dependencies</h3>
+                <code className="block bg-black/50 p-2 rounded text-xs text-green-400 mb-2">npm install package-name</code>
+                <code className="block bg-black/50 p-2 rounded text-xs text-green-400">npm install react framer-motion</code>
+              </div>
+
+              <div className={`border rounded-lg p-4 ${
+                theme === 'dark' ? 'bg-black border-white/20' : 'bg-gray-100 border-black/20'
+              }`}>
+                <h3 className="font-bold text-white mb-2">▶️ Run Development Server</h3>
+                <code className="block bg-black/50 p-2 rounded text-xs text-green-400 mb-2">npm run dev</code>
+                <code className="block bg-black/50 p-2 rounded text-xs text-green-400">npm start</code>
+              </div>
+
+              <div className={`border rounded-lg p-4 ${
+                theme === 'dark' ? 'bg-black border-white/20' : 'bg-gray-100 border-black/20'
+              }`}>
+                <h3 className="font-bold text-white mb-2">💡 Recommended Tools</h3>
+                <ul className="text-sm space-y-1">
+                  <li>• <strong>VS Code</strong> - Code editor</li>
+                  <li>• <strong>Git</strong> - Version control</li>
+                  <li>• <strong>pnpm/yarn</strong> - Alternative package managers</li>
+                </ul>
+              </div>
+
+              <p className="text-xs text-gray-500 pt-2">💡 Tip: Use the Free Will Playground for quick experiments, and local setup for full projects!</p>
+            </div>
+          </Dialog>
+
+          <Dialog open={showFAQ} onClose={() => setShowFAQ(false)} title="Frequently Asked Questions">
+            <div className="space-y-4 max-h-96 overflow-y-auto">
+              <div>
+                <h3 className="font-bold text-white mb-2">❓ What is Wiskter?</h3>
+                <p className="text-sm">Wiskter is an interactive coding education platform that helps beginners learn programming through hands-on practice and AI-powered assistance.</p>
+              </div>
+              <div>
+                <h3 className="font-bold text-white mb-2">🆓 Is Wiskter free?</h3>
+                <p className="text-sm">Yes! Wiskter is completely free to use. All courses, lessons, and AI assistance are available at no cost.</p>
+              </div>
+              <div>
+                <h3 className="font-bold text-white mb-2">💾 How do I save my progress?</h3>
+                <p className="text-sm">Sign up for a free account to automatically save your progress. Your completed lessons and achievements will be stored locally.</p>
+              </div>
+              <div>
+                <h3 className="font-bold text-white mb-2">🤖 What is the AI Assistant?</h3>
+                <p className="text-sm">Our AI chatbot helps you when you're stuck. Ask questions about code, request hints, or get explanations on any programming concept.</p>
+              </div>
+              <div>
+                <h3 className="font-bold text-white mb-2">🌍 What languages are supported?</h3>
+                <p className="text-sm">Wiskter supports 13+ languages including English, Spanish, French, German, Chinese, Japanese, and more. Change language in Settings.</p>
+              </div>
+              <div>
+                <h3 className="font-bold text-white mb-2">📱 Can I use Wiskter on mobile?</h3>
+                <p className="text-sm">Yes! Wiskter is fully responsive and works great on phones, tablets, and desktops.</p>
+              </div>
+              <div>
+                <h3 className="font-bold text-white mb-2">🎓 What can I learn?</h3>
+                <p className="text-sm">HTML, CSS, JavaScript, Python, and React Native. Choose your skill level (Learning, Beginner, Intermediate, Expert) for personalized content.</p>
+              </div>
+              <div>
+                <h3 className="font-bold text-white mb-2">🎨 What is Free Will Playground?</h3>
+                <p className="text-sm">A live code editor where you can freely experiment with HTML, CSS, and JavaScript. See your changes in real-time with instant preview.</p>
+              </div>
+              <div>
+                <h3 className="font-bold text-white mb-2">💬 How do I get help?</h3>
+                <p className="text-sm">Click the 🤖 AI Helper button during lessons, or join our Discord community for support from other learners and mentors.</p>
+              </div>
+              <div>
+                <h3 className="font-bold text-white mb-2">⭐ How can I support Wiskter?</h3>
+                <p className="text-sm">Rate us in Settings, share with friends, and provide feedback. Your support helps us improve!</p>
+              </div>
+              <p className="text-xs text-gray-500 text-center pt-4 border-t border-white/10">Made by Som Giri</p>
+            </div>
+          </Dialog>
+
           <Dialog open={showAbout} onClose={() => setShowAbout(false)} title="About Wiskter">
             <p className="mb-4">
               Wiskter - Learn Coding is an interactive coding education platform designed to help beginners master programming fundamentals.
@@ -2710,46 +2922,41 @@ function App() {
               </div>
               
               <button
-                onClick={() => {
+                onClick={async () => {
                   if (!email || !password || (isSignUp && !username)) return;
                   
-                  const accounts = JSON.parse(localStorage.getItem('accounts') || '[]');
-                  
-                  if (isSignUp) {
-                    const exists = accounts.find((acc: any) => acc.email === email);
-                    if (exists) {
+                  try {
+                    if (isSignUp) {
+                      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                      await sendEmailVerification(userCredential.user);
+                      alert('Account created! Please check your email to verify your account.');
+                    } else {
+                      await signInWithEmailAndPassword(auth, email, password);
+                    }
+                    
+                    setShowAuth(false);
+                    setShowSignInAnimation(true);
+                    setTimeout(() => {
+                      setIsLoggedIn(true);
+                      setTimeout(() => {
+                        setShowSignInAnimation(false);
+                      }, 2000);
+                    }, 1500);
+                    
+                    setEmail('');
+                    setPassword('');
+                    setUsername('');
+                  } catch (error: any) {
+                    if (error.code === 'auth/email-already-in-use') {
                       alert('Account already exists! Please sign in.');
-                      return;
-                    }
-                    accounts.push({ email, password, username });
-                    localStorage.setItem('accounts', JSON.stringify(accounts));
-                    setShowAuth(false);
-                    setShowSignInAnimation(true);
-                    setTimeout(() => {
-                      setIsLoggedIn(true);
-                      setTimeout(() => {
-                        setShowSignInAnimation(false);
-                      }, 2000);
-                    }, 1500);
-                  } else {
-                    const account = accounts.find((acc: any) => acc.email === email && acc.password === password);
-                    if (!account) {
+                    } else if (error.code === 'auth/invalid-credential') {
                       alert('Invalid email or password!');
-                      return;
+                    } else if (error.code === 'auth/weak-password') {
+                      alert('Password should be at least 6 characters!');
+                    } else {
+                      alert('Error: ' + error.message);
                     }
-                    setShowAuth(false);
-                    setShowSignInAnimation(true);
-                    setTimeout(() => {
-                      setIsLoggedIn(true);
-                      setTimeout(() => {
-                        setShowSignInAnimation(false);
-                      }, 2000);
-                    }, 1500);
                   }
-                  
-                  setEmail('');
-                  setPassword('');
-                  setUsername('');
                 }}
                 disabled={!email || !password || (isSignUp && !username)}
                 className="w-full py-3 bg-white text-black rounded-lg font-bold hover:bg-gray-200 transition-all hover:scale-105 mt-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
@@ -2757,13 +2964,24 @@ function App() {
                 {isSignUp ? 'Sign Up' : 'Sign In'}
               </button>
               
-              <div className="text-center pt-4">
+              <div className="text-center pt-4 space-y-2">
                 <button
                   onClick={() => setIsSignUp(!isSignUp)}
-                  className="text-sm text-gray-400 hover:text-white transition"
+                  className="text-sm text-gray-400 hover:text-white transition block w-full"
                 >
                   {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
                 </button>
+                {!isSignUp && (
+                  <button
+                    onClick={() => {
+                      setShowAuth(false);
+                      setShowForgotPassword(true);
+                    }}
+                    className="text-xs text-blue-400 hover:text-blue-300 transition"
+                  >
+                    Forgot Password?
+                  </button>
+                )}
               </div>
             </div>
           </Dialog>
@@ -3009,7 +3227,10 @@ function App() {
                       <span>✓</span> {t('signedIn', language)}
                     </p>
                     <button
-                      onClick={() => setIsLoggedIn(false)}
+                      onClick={async () => {
+                        await signOut(auth);
+                        setIsLoggedIn(false);
+                      }}
                       className="text-sm text-red-400 hover:text-red-300 transition"
                     >
                       {t('signOut', language)}
